@@ -40,7 +40,7 @@ void printAllTowers(Stack *A, Stack *B, Stack *C);
 void printTower(Stack *tower, char name);
 bool isValidMove(Stack *from, Stack *to);
 bool moveDisk(Stack *from, Stack *to, char fromName, char toName);
-bool areAllDisksInOneTower(Stack *A, Stack *B, Stack *C, int n);
+bool areAllDisksInOneTower(Stack *X, int n);
 void initializeGame(Stack *A, Stack *B, Stack *C, int n);
 
 //////////////////////////////////////////////////////
@@ -67,62 +67,62 @@ int main(void) {
     printAllTowers(&A, &B, &C);
 
     // The game continues until user quits or all disks are in one tower
-    while (!quit && !areAllDisksInOneTower(&A, &B, &C, n)) {
+    while (!quit && !areAllDisksInOneTower(&C, n)) {
         printf("Enter your move (e.g., 'A B' to move top disk from Tower A to Tower B), or 'Q' to quit:\n> ");
         scanf("%s", input);
 
-        // If the user typed 'Q' or 'q', we quit
-        if (input[0] == 'Q' || input[0] == 'q') {
-            quit = true;
-            break;
+            // If the user typed 'Q' or 'q', we quit
+            if (input[0] == 'Q' || input[0] == 'q') {
+                quit = true;
+                break;
+            }
+    
+            // We expect something like "AB" or "B C" or "C A"
+            if (strlen(input) != 2) {
+                printf("Invalid command format. Please use two letters like 'AB'.\n");
+                continue;
+            }
+
+            char fromChar = input[0];
+            char toChar   = input[1];
+
+            // Map fromChar and toChar to the actual stacks
+            Stack *fromTower = NULL;
+            Stack *toTower   = NULL;
+
+            if (fromChar == 'A' || fromChar == 'a') fromTower = &A;
+            if (fromChar == 'B' || fromChar == 'b') fromTower = &B;
+            if (fromChar == 'C' || fromChar == 'c') fromTower = &C;
+
+            if (toChar == 'A' || toChar == 'a') toTower = &A;
+            if (toChar == 'B' || toChar == 'b') toTower = &B;
+            if (toChar == 'C' || toChar == 'c') toTower = &C;
+
+            // Check if the user typed something valid
+            if (fromTower == NULL || toTower == NULL) {
+                printf("Invalid towers. Please type letters from {A, B, C}.\n");
+                continue;
+            }
+            if (fromTower == toTower) {
+                printf("Cannot move from and to the same tower.\n");
+                continue;
+            }
+
+            // Attempt to move
+            if (!moveDisk(fromTower, toTower, fromChar, toChar)) {
+                printf("Invalid move: you cannot place a bigger disk on a smaller disk.\n");
+            }
+
+            // Print state after the move
+            printAllTowers(&A, &B, &C);
         }
 
-        // We expect something like "A B" or "B C" or "C A"
-        if (strlen(input) != 2) {
-            printf("Invalid command format. Please use two letters like 'A B'.\n");
-            continue;
-        }
-
-        char fromChar = input[0];
-        char toChar   = input[1];
-
-        // Map fromChar and toChar to the actual stacks
-        Stack *fromTower = NULL;
-        Stack *toTower   = NULL;
-
-        if (fromChar == 'A' || fromChar == 'a') fromTower = &A;
-        if (fromChar == 'B' || fromChar == 'b') fromTower = &B;
-        if (fromChar == 'C' || fromChar == 'c') fromTower = &C;
-
-        if (toChar == 'A' || toChar == 'a') toTower = &A;
-        if (toChar == 'B' || toChar == 'b') toTower = &B;
-        if (toChar == 'C' || toChar == 'c') toTower = &C;
-
-        // Check if the user typed something valid
-        if (fromTower == NULL || toTower == NULL) {
-            printf("Invalid towers. Please type letters from {A, B, C}.\n");
-            continue;
-        }
-        if (fromTower == toTower) {
-            printf("Cannot move from and to the same tower.\n");
-            continue;
-        }
-
-        // Attempt to move
-        if (!moveDisk(fromTower, toTower, fromChar, toChar)) {
-            printf("Invalid move: you cannot place a bigger disk on a smaller disk.\n");
-        }
-
-        // Print state after the move
-        printAllTowers(&A, &B, &C);
-    }
-
-    if (areAllDisksInOneTower(&A, &B, &C, n)) {
+    if (areAllDisksInOneTower(&C, n)) {
         printf("Congratulations! All disks are in one tower.\n");
     } else {
         printf("You chose to quit the game.\n");
     }
-
+    
     return 0;
 }
 
@@ -138,22 +138,50 @@ void initStack(Stack *s) {
 
 // Check if the stack is empty
 bool isEmpty(Stack *s) {
-    // TODO
+    return s->top == NULL;
 }
 
 // Push a new disk onto the top of the stack
 void push(Stack *s, int disk) {
-    // TODO
+    Node *newNode = (Node *)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        printf("Memory allocation error\n");
+        return;
+    }
+    newNode->disk = disk;
+    newNode->next = s->top;
+    s->top = newNode;
 }
 
-// Pop the top disk from the stack and return its value
+// Pop the top disk from the stack and return its value (-1 if the stack is empty)
 int pop(Stack *s) {
-    // TODO
+    if (isEmpty(s)) {
+        printf("Stack underflow error\n");
+        return -1; // Indicate an error
+    }
+    Node *temp = s->top;
+    int disk = temp->disk;
+    s->top = s->top->next;
+    free(temp);
+    return disk;
 }
 
 // Peek the top disk (without removing it)
+/**
+ * Peek the top disk of the stack without removing it.
+ *
+ * This function returns the value of the top disk in the stack.
+ * If the stack is empty, it returns -1 and prints an error message.
+ *
+ * @param s The stack to peek.
+ * @return The value of the top disk, or -1 if the stack is empty.
+ */
 int peek(Stack *s) {
-    // TODO
+    if (isEmpty(s)) {
+        printf("Stack is empty\n");
+        return -1; // Indicate an error
+    }
+    return s->top->disk;
 }
 
 //////////////////////////////////////////////////////
@@ -214,46 +242,26 @@ bool moveDisk(Stack *from, Stack *to, char fromName, char toName) {
         return false;
     }
     // Perform the move
-    /**
-     * Moves the top disk from one tower to another.
-     *
-     * This function pops the top disk from the source tower and pushes it onto the destination tower.
-     * It then prints a message indicating the move.
-     *
-     * @param from The source tower from which the disk is moved.
-     * @param to The destination tower to which the disk is moved.
-     * @param fromName The name of the source tower.
-     * @param toName The name of the destination tower.
-     * @return true if the move was successful.
-     */
-
-    // TO DO
+    int disk = pop(from);
+    push(to, disk);
+    printf("Moved disk %d from Tower %c to Tower %c\n", disk, fromName, toName);
+    return true;
 }
 
 // Check if all disks (n total) are in exactly one tower
 // This means either A has n disks, or B has n disks, or C has n disks
-bool areAllDisksInOneTower(Stack *A, Stack *B, Stack *C, int n) {
-    // Count how many disks are in each tower
-    int countA = 0, countB = 0, countC = 0;
+bool areAllDisksInOneTower(Stack *X, int n) {
+    int countX = 0;
+    Node *current;
 
-    Node *current = A->top;
+    current = X->top;
     while (current != NULL) {
-        countA++;
-        current = current->next;
-    }
-    current = B->top;
-    while (current != NULL) {
-        countB++;
-        current = current->next;
-    }
-    current = C->top;
-    while (current != NULL) {
-        countC++;
+        countX++;
         current = current->next;
     }
 
     // If any tower has exactly n disks, game is "solved" in that sense
-    return (countA == n || countB == n || countC == n);
+    return countX == n;
 }
 
 // Put n disks in tower A, largest at the bottom, smallest at the top
